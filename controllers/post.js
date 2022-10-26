@@ -1,36 +1,59 @@
-const { Post, Tag } = require('../models')
+const { Post, Tag } = require("../models")
 
 async function create(req, res, next) {
-  const {title, body, tags} = req.body
-  // TODO: create a new post
-  // if there is no title or body, return a 400 status
-  // omitting tags is OK
-  // create a new post using title, body, and tags
-  // return the new post as json and a 200 status
+  const { title, body, tags } = req.body
+  try {
+    // console.log(title, body, tags)
+    // TODO: create a new post
+    // if there is no title or body, return a 400 status
+    // omitting tags is OK
+    // create a new post using title, body, and tags
+    // return the new post as json and a 200 status
+    if (!title || !body) {
+      return res.status(400).send()
+    }
+    const result = await Post.create({
+      title: title,
+      body: body,
+      tags: tags,
+    })
+    res.status(200).send(result)
+  } catch (e) {
+    console.log(e)
+  }
 }
 
 // should render HTML
 async function get(req, res) {
   try {
+    // console.log(req.params)
     const slug = req.params.slug
+    // console.log(slug)
     // TODO: Find a single post
     // find a single post by slug and populate 'tags'
     // you will need to use .lean() or .toObject()
-    post.createdAt = new Date(post.createdAt).toLocaleString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric',
+    // const mongoQuery = {}
+    // if (slug) {
+    //   const post = await Post.findOne({ slug: slug })
+    //   // console.log(postDoc)
+    // }
+    let post = await Post.findOne({ slug: slug }).lean()
+    post.createdAt = new Date(post.createdAt).toLocaleString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
     })
-    post.comments.map(comment => {
-      comment.createdAt = new Date(comment.createdAt).toLocaleString('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: 'numeric',
+    post.comments.map((comment) => {
+      comment.createdAt = new Date(comment.createdAt).toLocaleString("en-US", {
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric",
       })
       return comment
     })
-    res.render('view-post', {post, isLoggedIn: req.session.isLoggedIn})
-  } catch(err) {
+
+    res.render("view-post", { post, isLoggedIn: req.session.isLoggedIn })
+  } catch (err) {
     res.status(500).send(err.message)
   }
 }
@@ -41,46 +64,55 @@ async function getAll(req, res) {
     // get by single tag id if included
     const mongoQuery = {}
     if (req.query.tag) {
-      const tagDoc =  await Tag.findOne({name: req.query.tag}).lean()
-      if (tagDoc)
-        mongoQuery.tags = {_id: tagDoc._id }
+      const tagDoc = await Tag.findOne({ name: req.query.tag }).lean()
+      if (tagDoc) mongoQuery.tags = { _id: tagDoc._id }
     }
-    const postDocs = await Post
-      .find(mongoQuery)
+    const postDocs = await Post.find(mongoQuery)
       .populate({
-        path: 'tags'
+        path: "tags",
       })
-      .sort({createdAt: 'DESC'})
-    const posts = postDocs.map(post => {
+      .sort({ createdAt: "DESC" })
+    const posts = postDocs.map((post) => {
       post = post.toObject()
-      post.createdAt = new Date(post.createdAt).toLocaleString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
+      post.createdAt = new Date(post.createdAt).toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
       })
       return post
     })
-    res.render('index', {
+    res.render("index", {
       posts,
       isLoggedIn: req.session.isLoggedIn,
-      tag: req.query.tag
+      tag: req.query.tag,
     })
-  } catch(err) {
+  } catch (err) {
     res.status(500).send(err.message)
   }
 }
 
 async function update(req, res) {
   try {
-    const {title, body, tags} = req.body
+    const { title, body, tags } = req.body
     const postId = req.params.id
     // TODO: update a post
     // if there is no title or body, return a 400 status
     // omitting tags is OK
     // find and update the post with the title, body, and tags
     // return the updated post as json
-  } catch(err) {
+    if (!title || !body) {
+      return res.status(400).send()
+    }
+
+    Post.findByIdAndUpdate(
+      postId,
+      { title: title, body: body, tags: tags },
+      (err, docs) => {
+        res.send(docs)
+      }
+    )
+  } catch (err) {
     res.status(500).send(err.message)
   }
 }
@@ -89,6 +121,9 @@ async function remove(req, res, next) {
   const postId = req.params.id
   // TODO: Delete a post
   // delete post by id, return a 200 status
+  Post.deleteOne({ _id: postId }, (err, docs) => {
+    res.status(200).send()
+  })
 }
 
 module.exports = {
@@ -96,5 +131,5 @@ module.exports = {
   getAll,
   create,
   update,
-  remove
+  remove,
 }
